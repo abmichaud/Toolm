@@ -1,0 +1,53 @@
+# batch environment variables, https://mothur.org/wiki/batch_mode/
+# batch commands
+# set an output directory where all your output files will go and you will download results from here using FileZilla
+# CHANGE FOR NEW DATASET
+set.dir(output=/home/amichaud/toolm_out)
+# makes a mothur file
+# CHANGE FOR A NEW DATASET
+make.file(inputdir=/home/amichaud/toolm_seqs, type=fastq, prefix=toolm)
+# makes contigs from the paired end reads
+make.contigs(file=current)
+summary.seqs(fasta=current)
+# removes seqs with ambiguous bases and homopolymers longer than 8 and too short and too long seqs
+# this is calibrated for V4V5 primers that should produce a fragment of between this length
+screen.seqs(fasta=current, group=current, maxambig=0, maxhomop=8, minlength=408, maxlength=418)
+summary.seqs(fasta=current)
+unique.seqs(fasta=current)
+count.seqs(name=current, group=current)
+summary.seqs(count=current)
+# most uptodate silva reference file as of 29 April 2020
+pcr.seqs(fasta=/mnt/storage/data/edna/mothur/reference/v4v5/silva.nr_v138.align, oligos=/mnt/storage/data/edna/mothur/reference/v4v5/V4V5_IMR_primer.oligos)
+summary.seqs(fasta=current)
+rename.file(input=/home/amichaud/toolm_out/silva.nr_v138.pcr.align, new=silva.nr.138.v4v5.fasta)
+align.seqs(fasta=/home/amichaud/toolm_out/toolm.paired.trim.contigs.good.unique.fasta, reference=/home/amichaud/toolm_out/silva.nr.138.v4v5.fasta)
+summary.seqs(fasta=current, count=current)
+# set your working directory back to the toolm_out directory
+set.dir(input=/home/amichaud/toolm_out)
+screen.seqs(fasta=toolm.paired.trim.contigs.good.unique.align, count=toolm.paired.trim.contigs.good.count_table, summary=toolm.paired.trim.contigs.good.unique.summary, start=13862, end=27654)
+summary.seqs(fasta=current, count=current)
+filter.seqs(fasta=current, vertical=T, trump=.)
+unique.seqs(fasta=current, count=current)
+summary.seqs(fasta=current, count=current)
+pre.cluster(fasta=current, count=current, diffs=2)
+chimera.vsearch(fasta=current, count=current, dereplicate=t)
+remove.seqs(fasta=current, accnos=current)
+summary.seqs(fasta=current, count=current)
+classify.seqs(fasta=current, count=current, reference=/mnt/storage/data/edna/mothur/reference/v4v5/silva.nr_v138.align, taxonomy=/mnt/storage/data/edna/mothur/reference/v4v5/silva.nr_v138.tax, cutoff=80)
+# removes Chloroplast and mitochondria and unknown taxa but only the unknowns from the fourth domain
+remove.lineage(fasta=current, count=current, taxonomy=current, taxon=Chloroplast-mitochondria-unknown)
+summary.tax(taxonomy=current, count=current)
+dist.seqs(fasta=current, cutoff=0.03)
+cluster(column=current, count=current, cutoff=0.03)
+make.shared(list=current, count=current, label=0.03)
+classify.otu(list=current, count=current, taxonomy=current, label=0.03)
+count.groups(shared=current)
+# rarefy the shared file to the smallest number of OTUs from a particular sample and defaults to the smallest
+# using count.groups above to tell us what that number of OTUs actually is in our dataset.
+sub.sample(shared=current)
+rarefaction.single(shared=current, calc=sobs, freq=100)
+summary.single(shared=current, calc=nseqs-coverage-sobs-invsimpson, subsample=t)
+#dist.shared(shared=$DIST.SHARED_SHARED, calc=$DIST.SHARED_CALC, subsample=$DIST.SHARED_SUBSAMPLE)
+get.oturep(column=current, name=current, list=current, fasta=current, cutoff=0.03)
+# let the system know it is done
+system(echo /home/amichaud/toolm_out/abm_toolm_v4v5.yaml >> /mnt/storage/data/edna/mothur/.register)
